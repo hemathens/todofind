@@ -4,7 +4,17 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const run = promisify(execFile);
-const git = (args, cwd) => run('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+export const git = (args, cwd) => run('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+
+/** Files git considers part of the project: tracked + untracked, minus everything ignored. Null if not a repo. */
+export async function listFiles(cwd) {
+  try {
+    const { stdout } = await git(['ls-files', '-z', '--cached', '--others', '--exclude-standard'], cwd);
+    return [...new Set(stdout.split('\0').filter(Boolean))];
+  } catch {
+    return null;
+  }
+}
 
 const UNITS = { d: 86400, w: 604800, m: 2592000, y: 31536000 }; // seconds
 
