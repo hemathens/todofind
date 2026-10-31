@@ -6,6 +6,7 @@
 
 Scan your codebase for `TODO`, `FIXME`, `HACK`, `BUG`, `XXX` and `NOTE` comments.
 Get the report as a **table**, **Markdown** or **JSON**.
+Find every FIXME in your project, see when they were added, and stop new FIXMEs from being committed.
 
 ## Usage
 
