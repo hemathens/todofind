@@ -24,6 +24,8 @@ npx todofind -f json --ci          # exit code 1 if anything found (for CI)
 | `-i, --ignore` | Extra folders to skip, e.g. `-i tests,docs` |
 | `-o, --output` | Save the report to a file |
 | `--ci` | Exit with code 1 if any tags are found |
+| `-s, --since` | Only TODOs changed since `7d`, `2w` or a git ref (needs git) |
+| `--sort` | Sort by `file`, `tag` or `date` |
 
 `node_modules`, `.git`, `dist`, `build` and other common folders are skipped automatically.
 Binary files and files over 1 MB are skipped.
