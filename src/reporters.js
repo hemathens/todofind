@@ -13,25 +13,27 @@ function truncate(str, max) {
 export function toTable(results, { color = false } = {}) {
   if (results.length === 0) return 'No tagged comments found.';
 
-  const rows = results.map((r) => ({
-    loc: `${r.file}:${r.line}`,
-    tag: r.tag,
-    msg: truncate((r.author ? `(${r.author}) ` : '') + r.message, 60),
-  }));
+  const hasDate = results.some((r) => r.date);
+  const header = ['Location', 'Tag', ...(hasDate ? ['Date'] : []), 'Message'];
+  const rows = results.map((r) => [
+    `${r.file}:${r.line}`,
+    r.tag,
+    ...(hasDate ? [r.date ? r.date.slice(0, 10) : '-'] : []),
+    truncate((r.author ? `(${r.author}) ` : '') + r.message, 60),
+  ]);
 
-  const wLoc = Math.max(8, ...rows.map((r) => r.loc.length));
-  const wTag = Math.max(3, ...rows.map((r) => r.tag.length));
-  const wMsg = Math.max(7, ...rows.map((r) => r.msg.length));
-
-  const bar = (l, m, r) => l + [wLoc, wTag, wMsg].map((w) => '─'.repeat(w + 2)).join(m) + r;
-  const row = (loc, tag, msg, tagColor) =>
-    `│ ${loc.padEnd(wLoc)} │ ${paint(tag.padEnd(wTag), tagColor, color)} │ ${msg.padEnd(wMsg)} │`;
+  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
+  const bar = (l, m, r) => l + widths.map((w) => '─'.repeat(w + 2)).join(m) + r;
+  const line = (cells, tagColor) =>
+    '│ ' +
+    cells.map((c, i) => (i === 1 ? paint(c.padEnd(widths[i]), tagColor, color) : c.padEnd(widths[i]))).join(' │ ') +
+    ' │';
 
   const out = [
     bar('┌', '┬', '┐'),
-    row('Location', 'Tag', 'Message'),
+    line(header),
     bar('├', '┼', '┤'),
-    ...rows.map((r) => row(r.loc, r.tag, r.msg, COLORS[r.tag])),
+    ...rows.map((r) => line(r, COLORS[r[1]])),
     bar('└', '┴', '┘'),
   ];
 
@@ -43,6 +45,7 @@ export function toTable(results, { color = false } = {}) {
 
 export function toMarkdown(results, { filesScanned = 0 } = {}) {
   const { total, byTag } = summarize(results);
+  const hasDate = results.some((r) => r.date);
   const lines = ['# Todo Report', '', `**Total:** ${total} | **Files scanned:** ${filesScanned}`, ''];
 
   if (total === 0) return lines.concat('No tagged comments found.').join('\n') + '\n';
@@ -52,10 +55,16 @@ export function toMarkdown(results, { filesScanned = 0 } = {}) {
   lines.push('');
 
   for (const tag of Object.keys(byTag)) {
-    lines.push(`## ${tag}`, '', '| File | Line | Message |', '|------|------|---------|');
+    lines.push(
+      `## ${tag}`,
+      '',
+      hasDate ? '| File | Line | Date | Message |' : '| File | Line | Message |',
+      hasDate ? '|------|------|------|---------|' : '|------|------|---------|'
+    );
     for (const r of results.filter((x) => x.tag === tag)) {
       const msg = ((r.author ? `(${r.author}) ` : '') + r.message).replace(/\|/g, '\\|');
-      lines.push(`| \`${r.file}\` | ${r.line} | ${msg} |`);
+      const date = hasDate ? ` ${r.date ? r.date.slice(0, 10) : '-'} |` : '';
+      lines.push(`| \`${r.file}\` | ${r.line} |${date} ${msg} |`);
     }
     lines.push('');
   }

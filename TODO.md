@@ -1,4 +1,4 @@
-# Todo Report
+# Sample Todo Report
 
 **Total:** 5 | **Files scanned:** 11
 

@@ -82,11 +82,31 @@ export async function scan(root, options = {}) {
   }
 
   results.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
-  return { results, filesScanned };
+  return { results, filesScanned, root: base };
 }
 
 export function summarize(results) {
   const byTag = {};
   for (const r of results) byTag[r.tag] = (byTag[r.tag] ?? 0) + 1;
   return { total: results.length, byTag };
+}
+
+export const SORT_OPTIONS = ['file', 'tag', 'date'];
+
+// Most urgent first; custom tags go after these, alphabetically.
+const TAG_ORDER = ['BUG', 'FIXME', 'HACK', 'XXX', 'TODO', 'NOTE'];
+const tagRank = (t) => (TAG_ORDER.includes(t) ? TAG_ORDER.indexOf(t) : TAG_ORDER.length);
+
+export function sortResults(results, by = 'file') {
+  const byFile = (a, b) => a.file.localeCompare(b.file) || a.line - b.line;
+  const sorted = [...results];
+  if (by === 'tag') {
+    sorted.sort((a, b) => tagRank(a.tag) - tagRank(b.tag) || a.tag.localeCompare(b.tag) || byFile(a, b));
+  } else if (by === 'date') {
+    // newest first; items without a date go last
+    sorted.sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0) || byFile(a, b));
+  } else {
+    sorted.sort(byFile);
+  }
+  return sorted;
 }
