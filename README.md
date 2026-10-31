@@ -1,6 +1,8 @@
 # todofind
 
 ![npm](https://img.shields.io/npm/v/todofind) ![CI](https://github.com/hemathens/todofind/actions/workflows/ci.yml/badge.svg)
+[![Kaggle](https://img.shields.io/badge/Kaggle-Hem%20Ajit%20Patel-20BEFF?logo=kaggle)](https://www.kaggle.com/hemajitpatel)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Hem%20Patel-0A66C2?logo=linkedin)](https://www.linkedin.com/in/hem-patel19)
 
 Scan your codebase for `TODO`, `FIXME`, `HACK`, `BUG`, `XXX` and `NOTE` comments.
 Get the report as a **table**, **Markdown** or **JSON**.
