@@ -23,7 +23,7 @@
   
 "name": "todofind",
   
-"version": "1.2.0",
+"version": "1.3.0",
   
 "description": "Scan your codebase for TODO, FIXME and other comment tags. Output as table, Markdown or JSON.",
   
