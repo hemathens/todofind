@@ -7,6 +7,7 @@ import { isGitRepo, resolveSince, annotate, filterSince } from './git.js';
 import { getStagedResults } from './staged.js';
 import { installHook, removeHook, DEFAULT_HOOK_TAGS } from './hook.js';
 import { REPORTERS } from './reporters.js';
+import { createSpinner } from './spinner.js';
 
 const FORMATS = Object.keys(REPORTERS);
 const list = (v) => v.split(',').map((s) => s.trim()).filter(Boolean);
@@ -34,6 +35,33 @@ function fail(message) {
   process.exitCode = 2; // 0 = ok, 1 = tags found (with --ci), 2 = error or bad usage
 }
 
+// The slow part: find files, optionally ask git. Throws on bad usage (caught in scanAction).
+async function collect(target, opts, sortBy, spinner) {
+  if (opts.staged) {
+    const root = path.resolve(target);
+    if (!(await isGitRepo(root))) throw new Error('--staged needs git installed and a git repository.');
+    return getStagedResults(root, { tags: opts.tags, ignore: opts.ignore });
+  }
+
+  const found = await scan(target, {
+    tags: opts.tags,
+    ignore: opts.ignore,
+    gitignore: opts.gitignore,
+    onProgress: (n) => spinner.update(`Scanning files… ${n}`),
+  });
+  let { results } = found;
+
+  // Git data is needed for --since, and for sorting by date.
+  if (opts.since || sortBy === 'date') {
+    if (!(await isGitRepo(found.root))) throw new Error('--since and --sort date need git installed and a git repository.');
+    spinner.update('Reading git history…');
+    const since = opts.since ? await resolveSince(opts.since, found.root) : null;
+    results = await annotate(results, found.root);
+    if (since) results = filterSince(results, since);
+  }
+  return { results, filesScanned: found.filesScanned };
+}
+
 async function scanAction(target, opts) {
   try {
     const sortBy = opts.sort.toLowerCase();
@@ -47,26 +75,12 @@ async function scanAction(target, opts) {
     // Ask only when no flag was given and a human is at the terminal.
     if (!format) format = process.stdin.isTTY ? await chooseFormat() : 'table';
 
+    const spinner = createSpinner('Scanning files…', { enabled: !opts.quiet }).start();
     let results, filesScanned;
-    if (opts.staged) {
-      const root = path.resolve(target);
-      if (!(await isGitRepo(root))) return fail('--staged needs git installed and a git repository.');
-      ({ results, filesScanned } = await getStagedResults(root, { tags: opts.tags, ignore: opts.ignore }));
-    } else {
-      let root;
-      ({ results, filesScanned, root } = await scan(target, {
-        tags: opts.tags,
-        ignore: opts.ignore,
-        gitignore: opts.gitignore,
-      }));
-
-      // Git data is needed for --since, and for sorting by date.
-      if (opts.since || sortBy === 'date') {
-        if (!(await isGitRepo(root))) return fail('--since and --sort date need git installed and a git repository.');
-        const since = opts.since ? await resolveSince(opts.since, root) : null;
-        results = await annotate(results, root);
-        if (since) results = filterSince(results, since);
-      }
+    try {
+      ({ results, filesScanned } = await collect(target, opts, sortBy, spinner));
+    } finally {
+      spinner.stop(); // always clear the line, even on errors
     }
     results = sortResults(results, sortBy);
 

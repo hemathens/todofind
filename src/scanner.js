@@ -85,7 +85,7 @@ async function* listFiles(root, ignore, useGitignore) {
 
 /**
  * Scan a directory (or a single file) for comment tags.
- * Options: tags, ignore (names), gitignore (default true).
+ * Options: tags, ignore (names), gitignore (default true), onProgress(filesScanned).
  * @returns {Promise<{results: object[], filesScanned: number, root: string}>}
  */
 export async function scan(root, options = {}) {
@@ -111,6 +111,7 @@ export async function scan(root, options = {}) {
     const buffer = await fs.readFile(file);
     if (looksBinary(buffer)) continue;
     filesScanned++;
+    options.onProgress?.(filesScanned);
 
     buffer.toString('utf8').split(/\r?\n/).forEach((line, i) => {
       const hit = matchLine(regex, line);
